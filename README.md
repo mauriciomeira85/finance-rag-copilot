@@ -27,15 +27,41 @@ Uma pergunta como “qual o MDR do Visa crédito na Alfa?” cai na tabela de ta
 
 ---
 
-## Como funciona
+## Arquitetura
 
-1. A pergunta é buscada em dois índices ao mesmo tempo: um semântico (sentido da frase) e um lexical BM25 (código, percentual, nome de bandeira).
-2. Os dois rankings são fundidos (RRF) e reordenados.
-3. O modelo avalia se os trechos recuperados realmente respondem a pergunta. Se não respondem, a pergunta é reescrita e a busca roda de novo.
-4. A resposta é gerada só com o texto recuperado, com citação do arquivo e da seção.
-5. Uma checagem final verifica se cada afirmação está no contexto. Sem base, o sistema se recusa.
+O sistema é um RAG corretivo: a busca, a geração e a decisão de responder ou recusar são etapas explícitas de um grafo, não um único prompt.
 
-Na tela isso aparece como rota: resposta direta, consulta reescrita, resposta refeita ou abstenção.
+```mermaid
+flowchart LR
+  A[Interface Streamlit] --> B[API FastAPI]
+  B --> C[LangGraph]
+  C --> D[(Qdrant<br/>denso + BM25)]
+  C --> E[DeepSeek]
+  C --> F[Traces e métricas]
+```
+
+Fluxo de uma pergunta:
+
+```mermaid
+flowchart TD
+  P[Pergunta] --> H[Busca híbrida no Qdrant]
+  H --> D[Embedding semântico]
+  H --> S[BM25]
+  D --> R[Fusão RRF e re-ranking]
+  S --> R
+  R --> J{Os trechos respondem?}
+  J -->|não, ainda há tentativa| W[Reescreve a pergunta]
+  W --> H
+  J -->|não, tentativas esgotadas| X[Abstenção]
+  J -->|sim| G[DeepSeek gera a resposta com citação]
+  G --> C{A resposta está no texto?}
+  C -->|não| G
+  C -->|sim| Y[Resposta + fontes + custo]
+```
+
+A ingestão (chunking que preserva tabela e título, embeddings locais via fastembed e gravação no Qdrant) roda na subida da API. O código correspondente está em `src/finrag/ingestion`, `retrieval` e `graph`.
+
+Na interface a rota aparece como resposta direta, consulta reescrita, resposta refeita ou abstenção.
 
 ---
 

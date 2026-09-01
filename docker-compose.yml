@@ -66,6 +66,8 @@ services:
       - "127.0.0.1:8501:8501"
     environment:
       FINRAG_API_URL: http://api:8000
+    volumes:
+      - ./app:/app/app:ro
     depends_on:
       api:
         condition: service_healthy
