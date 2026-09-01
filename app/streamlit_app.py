@@ -99,6 +99,8 @@ st.markdown(
       }
       [data-testid="stHeader"], [data-testid="stToolbar"],
       #MainMenu, footer, .stDeployButton { display: none !important; }
+      [data-testid="stSidebarNav"],
+      [data-testid="stSidebarNavSearch"] { display: none !important; }
       [data-testid="stSidebar"] {
         background: #ebe6da !important;
         border-right: 1px solid var(--line);
