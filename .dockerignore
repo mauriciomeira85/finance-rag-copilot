@@ -1,0 +1,18 @@
+# Reduz o contexto enviado ao daemon e evita vazar segredo para dentro da imagem.
+.env
+.venv/
+.git/
+.github/
+.qdrant/
+.fastembed_cache/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+traces/
+reports/
+tests/
+docs/
+*.md
+!README.md

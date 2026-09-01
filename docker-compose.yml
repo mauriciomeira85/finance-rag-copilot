@@ -1,0 +1,96 @@
+# Stack da demo: Qdrant + API + interface + tunel publico.
+#
+# A chave de LLM fica no .env da maquina, nunca no GitHub.
+# Visitantes usam o link do tunel; nao precisam de chave nem de comando.
+#
+#   docker compose up --build -d
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      FINRAG_LLM__API_KEY: ${FINRAG_LLM__API_KEY:?defina FINRAG_LLM__API_KEY no .env}
+      FINRAG_LLM__BASE_URL: ${FINRAG_LLM__BASE_URL:-https://api.deepseek.com}
+      FINRAG_LLM__MODEL: ${FINRAG_LLM__MODEL:-deepseek-v4-flash}
+      FINRAG_VECTORSTORE__URL: http://qdrant:6333
+      FINRAG_RETRIEVAL__RERANKER: ${FINRAG_RETRIEVAL__RERANKER:-llm}
+      FINRAG_API__CORS_ORIGINS: '["http://localhost:8501","http://127.0.0.1:8501"]'
+      FINRAG_OBSERVABILITY__LOG_JSON: "true"
+    volumes:
+      - traces:/app/traces
+      - reports:/app/reports
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 180s
+
+  ui:
+    build: .
+    restart: unless-stopped
+    command:
+      - streamlit
+      - run
+      - app/streamlit_app.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --server.headless=true
+      - --server.enableCORS=false
+      - --server.enableXsrfProtection=false
+      - --browser.gatherUsageStats=false
+    ports:
+      - "127.0.0.1:8501:8501"
+    environment:
+      FINRAG_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.7.3
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--url", "http://ui:8501"]
+    depends_on:
+      ui:
+        condition: service_healthy
+
+volumes:
+  qdrant-storage:
+  traces:
+  reports:

@@ -1,0 +1,43 @@
+# Segredos
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# Artefatos locais do projeto
+.qdrant/
+.cache/
+storage/
+traces/
+*.jsonl.gz
+eval-run.log
+scripts/sync-vm.ps1
+reports/*.json
+!reports/.gitkeep
+# Versionado de proposito: e a evidencia dos numeros citados no README.
+!reports/eval-latest.json
+
+# Modelos ONNX baixados pelo fastembed
+.fastembed_cache/
+local_cache/
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

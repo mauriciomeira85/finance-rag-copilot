@@ -1,0 +1,112 @@
+[project]
+name = "finance-rag-copilot"
+version = "0.1.0"
+description = "Copiloto de perguntas e respostas sobre documentos financeiros de uma rede de franquias"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Mauricio Meira" }]
+keywords = ["rag", "llm", "langgraph", "hybrid-search", "reranking", "finops"]
+
+dependencies = [
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langgraph>=0.2.50",
+    "qdrant-client>=1.12.0",
+    "fastembed>=0.4.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sse-starlette>=2.1.0",
+    "structlog>=24.4.0",
+    "tenacity>=9.0.0",
+    "typer>=0.15.0",
+    "rich>=13.9.0",
+    "pypdf>=5.1.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+ui = ["streamlit>=1.40.0", "pandas>=2.2.0", "requests>=2.32.0"]
+langfuse = ["langfuse>=2.53.0"]
+
+[project.scripts]
+finrag = "finrag.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "httpx>=0.27.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finrag"]
+
+[tool.uv]
+package = true
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplify
+    "RUF",  # ruff-specific
+    "ASYNC",
+]
+ignore = ["B008", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+# Dubles de teste implementam apenas a parte da interface que o caso exercita,
+# entao a atribuicao a atributo privado e a passagem do duble ficam liberadas.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disable_error_code = ["method-assign", "assignment"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers --cov=finrag --cov-report=term-missing"
+asyncio_mode = "auto"
+markers = [
+    "integration: exige rede e chave de API real (desabilitado por padrao no CI)",
+    "slow: baixa modelos ONNX na primeira execucao",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
